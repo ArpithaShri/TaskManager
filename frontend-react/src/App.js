@@ -1,38 +1,47 @@
-// src/App.js
-import React, { useEffect, useState } from "react";
-import AddTask from "./components/AddTask";
-import TaskList from "./components/TaskList";
-import api from "./services/api";
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import LoginForm from "./components/LoginForm";
+import SignupForm from "./components/SignupForm";
+import Dashboard from "./pages/Dashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    // Load persisted user from localStorage if available
+    const savedUser = localStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
-  const fetchTasks = async () => {
-    try {
-      const res = await api.get("/tasks");
-      setTasks(res.data);
-    } catch (err) {
-      console.error("Error fetching tasks:", err);
-    } finally {
-      setLoading(false);
-    }
+  const handleLogin = (loggedInUser) => {
+    setUser(loggedInUser);
+    localStorage.setItem("user", JSON.stringify(loggedInUser));
   };
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const handleTaskAdded = (newTask) => setTasks((prev) => [...prev, newTask]);
-  const handleTaskDeleted = (id) =>
-    setTasks((prev) => prev.filter((t) => t._id !== id));
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem("user");
+    fetch("http://localhost:5000/api/auth/logout", { method: "POST", credentials: "include" });
+  };
 
   return (
-    <div style={{ textAlign: "center", padding: "40px" }}>
-      <h1>Task Manager (React)</h1>
-      <AddTask onTaskAdded={handleTaskAdded} />
-      {loading ? <p>Loading tasks...</p> : <TaskList tasks={tasks} onTaskDeleted={handleTaskDeleted} />}
-    </div>
+    <Router>
+      <div style={{ padding: "20px" }}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/signup" element={<SignupForm />} />
+          <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute user={user}>
+                <Dashboard user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<h2>404 - Page Not Found</h2>} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

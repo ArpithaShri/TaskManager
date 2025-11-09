@@ -6,9 +6,11 @@ import {
   updateTask,
   deleteTask,
 } from "../controllers/taskController.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+router.use(protect); // Protect all routes below
 router.post("/", createTask);
 router.get("/", getTasks);
 router.get("/:id", getTaskById);
